@@ -1,0 +1,26 @@
+name: Continuous Integration
+
+on:
+  pull_request:
+
+jobs:
+  continuous-integration:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Start Appium
+        run: Start-Process npx -ArgumentList 'appium'
+
+      - name: Run tests
+        run: npm run wdio
