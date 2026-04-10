@@ -1,0 +1,8 @@
+stages:
+  - test
+
+test:
+  stage: test
+  script:
+    - npm install
+    - npx wdio run wdio.conf.js

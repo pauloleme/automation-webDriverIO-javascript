@@ -52,3 +52,9 @@ apps/
 
 # Ruby / CocoaPods
 vendor/
+
+*.apk
+allure-results/
+allure-report/
+errorShots/
+node_modules/
