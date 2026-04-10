@@ -3,9 +3,12 @@ name: Continuous Integration
 on:
   pull_request:
 
+permissions:
+  contents: write
+
 jobs:
   continuous-integration:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
@@ -19,8 +22,39 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Install Allure CLI
+        run: npm install -D allure-commandline
+
       - name: Start Appium
-        run: Start-Process npx -ArgumentList 'appium'
+        run: |
+          npx appium > appium.log 2>&1 &
+          sleep 10
 
       - name: Run tests
         run: npm run wdio
+        continue-on-error: true
+
+      - name: Generate Allure report
+        if: always()
+        run: npx allure generate ./allure-results -o ./allure-report
+
+      - name: Upload Allure results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results
+          path: allure-results
+
+      - name: Upload Allure report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report
+          path: allure-report
+
+      - name: Upload Appium log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: appium-log
+          path: appium.log
