@@ -3,9 +3,6 @@ name: Continuous Integration
 on:
   pull_request:
 
-permissions:
-  contents: write
-
 jobs:
   continuous-integration:
     runs-on: ubuntu-latest
