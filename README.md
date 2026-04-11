@@ -54,19 +54,6 @@ Before running the project, make sure you have installed:
 
 `npm install`
 
-## Important
-
-Before executing the tests, make sure that:
-
-Appium is installed correctly
-an Android emulator is running, or a real device is connected
-the mobile app is properly configured in the WebdriverIO config file
-Appium server is running when necessary
-Starting Appium
-
-`npx appium`
-
-
 ## Running the Tests
 
 The main command to execute the project and open the report is:
