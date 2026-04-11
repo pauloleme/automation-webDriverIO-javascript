@@ -4,11 +4,12 @@ stages:
 
 test:
   stage: test
-  image: node:22
+  image: node:24
   script:
     - npm install
     - npm install -D allure-commandline
-    - npx wdio run ./wdio.android.app.conf.js || true
+    - npx appium driver install uiautomator2
+    - npx wdio run ./wdio.android.app.conf.js
     - npx allure generate ./allure-results -o ./allure-report
   artifacts:
     when: always
