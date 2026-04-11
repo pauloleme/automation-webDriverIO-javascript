@@ -7,12 +7,12 @@ variables:
   ANDROID_HOME: "$CI_PROJECT_DIR/android-sdk"
   ANDROID_AVD_HOME: "$CI_PROJECT_DIR/.android/avd"
   JAVA_HOME: "/usr/lib/jvm/java-17-openjdk-amd64"
-  PATH: "$PATH:$CI_PROJECT_DIR/android-sdk/cmdline-tools/latest/bin:$CI_PROJECT_DIR/android-sdk/platform-tools:$CI_PROJECT_DIR/android-sdk/emulator"
 
 test:
   stage: test
   image: node:24-bullseye
   before_script:
+    - export PATH="$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/emulator"
     - apt-get update
     - apt-get install -y openjdk-17-jdk wget unzip curl git libglu1-mesa libpulse0 libnss3 libxss1 libasound2 xvfb qemu-kvm
     - mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
@@ -29,9 +29,6 @@ test:
     - adb start-server
     - nohup emulator -avd ci-emulator -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -accel off > emulator.log 2>&1 &
     - adb wait-for-device
-    - adb shell settings put global window_animation_scale 0 || true
-    - adb shell settings put global transition_animation_scale 0 || true
-    - adb shell settings put global animator_duration_scale 0 || true
   script:
     - npx wdio run ./wdio.android.app.conf.js
     - npx allure generate ./allure-results -o ./allure-report
