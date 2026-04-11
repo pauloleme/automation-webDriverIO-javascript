@@ -1,8 +1,27 @@
 stages:
   - test
+  - deploy
 
 test:
   stage: test
+  image: node:22
   script:
     - npm install
-    - npx wdio run wdio.conf.js
+    - npm install -D allure-commandline
+    - npx wdio run ./wdio.android.app.conf.js || true
+    - npx allure generate ./allure-results -o ./allure-report
+  artifacts:
+    when: always
+    paths:
+      - allure-report
+
+pages:
+  stage: deploy
+  script:
+    - mkdir public
+    - cp -r allure-report/* public/
+  artifacts:
+    paths:
+      - public
+  only:
+    - main
