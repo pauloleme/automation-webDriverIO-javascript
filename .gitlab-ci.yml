@@ -2,13 +2,37 @@ stages:
   - test
   - deploy
 
+variables:
+  ANDROID_SDK_ROOT: "$CI_PROJECT_DIR/android-sdk"
+  ANDROID_HOME: "$CI_PROJECT_DIR/android-sdk"
+  ANDROID_AVD_HOME: "$CI_PROJECT_DIR/.android/avd"
+  JAVA_HOME: "/usr/lib/jvm/java-17-openjdk-amd64"
+  PATH: "$PATH:$CI_PROJECT_DIR/android-sdk/cmdline-tools/latest/bin:$CI_PROJECT_DIR/android-sdk/platform-tools:$CI_PROJECT_DIR/android-sdk/emulator"
+
 test:
   stage: test
-  image: node:24
-  script:
+  image: node:24-bullseye
+  before_script:
+    - apt-get update
+    - apt-get install -y openjdk-17-jdk wget unzip curl git libglu1-mesa libpulse0 libnss3 libxss1 libasound2 xvfb qemu-kvm
+    - mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
+    - wget -O /tmp/commandlinetools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+    - unzip -q /tmp/commandlinetools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools"
+    - mv "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
+    - yes | sdkmanager --licenses
+    - sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "emulator" "system-images;android-35;google_apis;x86_64"
+    - mkdir -p "$ANDROID_AVD_HOME"
+    - echo "no" | avdmanager create avd -n ci-emulator -k "system-images;android-35;google_apis;x86_64" --device "pixel"
     - npm install
     - npm install -D allure-commandline
     - npx appium driver install uiautomator2
+    - adb start-server
+    - nohup emulator -avd ci-emulator -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -accel off > emulator.log 2>&1 &
+    - adb wait-for-device
+    - adb shell settings put global window_animation_scale 0 || true
+    - adb shell settings put global transition_animation_scale 0 || true
+    - adb shell settings put global animator_duration_scale 0 || true
+  script:
     - npx wdio run ./wdio.android.app.conf.js
     - npx allure generate ./allure-results -o ./allure-report
   artifacts:
@@ -16,6 +40,7 @@ test:
     paths:
       - allure-results
       - allure-report
+      - emulator.log
     expire_in: 7 days
 
 pages:
