@@ -13,12 +13,16 @@ test:
   artifacts:
     when: always
     paths:
+      - allure-results
       - allure-report
+    expire_in: 7 days
 
 pages:
   stage: deploy
+  dependencies:
+    - test
   script:
-    - mkdir public
+    - mkdir -p public
     - cp -r allure-report/* public/
   artifacts:
     paths:
