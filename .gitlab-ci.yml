@@ -1,5 +1,4 @@
 stages:
-  - setup
   - test
 
 variables:
@@ -9,38 +8,9 @@ variables:
   JAVA_HOME: "/usr/lib/jvm/java-17-openjdk-amd64"
   ADB_INSTALL_TIMEOUT: "20"
 
-setup-android:
-  stage: setup
-  image: node:24-bullseye
-  before_script:
-    - apt-get update
-    - apt-get install -y openjdk-17-jdk wget unzip curl git xvfb libglu1-mesa libpulse0 libnss3 libxss1 libasound2 libc6 libstdc++6
-    - export PATH="$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/emulator"
-  script:
-    - mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
-    - wget -O /tmp/commandlinetools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-    - unzip -oq /tmp/commandlinetools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools"
-    - rm -rf "$ANDROID_SDK_ROOT/cmdline-tools/latest"
-    - mv "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
-    - yes | sdkmanager --sdk_root="$ANDROID_SDK_ROOT" --licenses || true
-    - sdkmanager --sdk_root="$ANDROID_SDK_ROOT" --install "platform-tools" "platforms;android-35" "build-tools;35.0.0" "emulator" "system-images;android-35;google_apis;x86_64"
-    - mkdir -p "$ANDROID_AVD_HOME"
-    - echo "no" | avdmanager create avd --force --name ci-emulator --package "system-images;android-35;google_apis;x86_64" --device "pixel"
-    - ls -la "$ANDROID_SDK_ROOT"
-    - ls -la "$ANDROID_SDK_ROOT/platform-tools"
-    - ls -la "$ANDROID_SDK_ROOT/emulator"
-    - ls -la "$ANDROID_AVD_HOME"
-  artifacts:
-    when: always
-    paths:
-      - .android/avd
-    expire_in: 1 day
-
 run-tests:
   stage: test
   image: node:24-bullseye
-  dependencies:
-    - setup-android
   before_script:
     - apt-get update
     - apt-get install -y openjdk-17-jdk wget unzip curl git xvfb libglu1-mesa libpulse0 libnss3 libxss1 libasound2 libc6 libstdc++6
@@ -77,6 +47,7 @@ run-tests:
     - adb shell settings put global transition_animation_scale 0 || true
     - adb shell settings put global animator_duration_scale 0 || true
     - npx wdio run ./wdio.android.app.conf.js || true
+    - rm -rf allure-report
     - npx allure generate ./allure-results -o ./allure-report || true
     - ls -la allure-results || true
     - ls -la allure-report || true
