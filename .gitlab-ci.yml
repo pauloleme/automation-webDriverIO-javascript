@@ -7,28 +7,29 @@ variables:
   ANDROID_HOME: "$CI_PROJECT_DIR/android-sdk"
   ANDROID_AVD_HOME: "$CI_PROJECT_DIR/.android/avd"
   JAVA_HOME: "/usr/lib/jvm/java-17-openjdk-amd64"
+  ADB_INSTALL_TIMEOUT: "20"
 
 setup-android:
   stage: setup
   image: node:24-bullseye
-  script:
-    - export PATH="$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/emulator"
+  before_script:
     - apt-get update
-    - apt-get install -y openjdk-17-jdk wget unzip curl git libglu1-mesa libpulse0 libnss3 libxss1 libasound2 xvfb
+    - apt-get install -y openjdk-17-jdk wget unzip curl git xvfb libglu1-mesa libpulse0 libnss3 libxss1 libasound2 libc6 libstdc++6
+    - export PATH="$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/emulator"
+  script:
     - mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
     - wget -O /tmp/commandlinetools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-    - unzip -q /tmp/commandlinetools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools"
+    - unzip -oq /tmp/commandlinetools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools"
     - rm -rf "$ANDROID_SDK_ROOT/cmdline-tools/latest"
     - mv "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
     - yes | sdkmanager --sdk_root="$ANDROID_SDK_ROOT" --licenses || true
-    - sdkmanager --sdk_root="$ANDROID_SDK_ROOT" "platform-tools" "platforms;android-35" "build-tools;35.0.0" "emulator" "system-images;android-35;google_apis;x86_64"
+    - sdkmanager --sdk_root="$ANDROID_SDK_ROOT" --install "platform-tools" "platforms;android-35" "build-tools;35.0.0" "emulator" "system-images;android-35;google_apis;x86_64"
     - mkdir -p "$ANDROID_AVD_HOME"
-    - echo "no" | avdmanager create avd -n ci-emulator -k "system-images;android-35;google_apis;x86_64" --device "pixel" || true
-    - echo "ANDROID_HOME=$ANDROID_HOME"
-    - echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+    - echo "no" | avdmanager create avd --force --name ci-emulator --package "system-images;android-35;google_apis;x86_64" --device "pixel"
     - ls -la "$ANDROID_SDK_ROOT"
     - ls -la "$ANDROID_SDK_ROOT/platform-tools"
     - ls -la "$ANDROID_SDK_ROOT/emulator"
+    - ls -la "$ANDROID_AVD_HOME"
   artifacts:
     when: always
     paths:
@@ -41,18 +42,33 @@ run-tests:
   image: node:24-bullseye
   dependencies:
     - setup-android
-  script:
-    - export PATH="$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/emulator"
+  before_script:
     - apt-get update
-    - apt-get install -y openjdk-17-jdk wget unzip curl git libglu1-mesa libpulse0 libnss3 libxss1 libasound2 xvfb
+    - apt-get install -y openjdk-17-jdk wget unzip curl git xvfb libglu1-mesa libpulse0 libnss3 libxss1 libasound2 libc6 libstdc++6
+    - export PATH="$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/emulator"
+  script:
     - npm install
     - npm install -D allure-commandline
     - npx appium driver install uiautomator2
     - adb start-server
-    - nohup emulator -avd ci-emulator -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -accel off > emulator.log 2>&1 &
-    - adb wait-for-device
+    - nohup emulator -avd ci-emulator -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -accel off -no-snapshot -no-metrics > emulator.log 2>&1 &
+    - adb wait-for-device || true
     - adb devices
-    - adb shell getprop sys.boot_completed || true
+    - |
+      boot_completed=""
+      for i in $(seq 1 30); do
+        boot_completed=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
+        if [ "$boot_completed" = "1" ]; then
+          echo "Emulator booted"
+          break
+        fi
+        echo "Waiting for emulator boot... attempt $i"
+        sleep 10
+      done
+    - adb devices
+    - adb shell settings put global window_animation_scale 0 || true
+    - adb shell settings put global transition_animation_scale 0 || true
+    - adb shell settings put global animator_duration_scale 0 || true
     - npx wdio run ./wdio.android.app.conf.js || true
     - npx allure generate ./allure-results -o ./allure-report || true
     - ls -la
