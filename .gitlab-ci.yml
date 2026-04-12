@@ -1,6 +1,5 @@
 stages:
   - test
-  - deploy
 
 variables:
   ANDROID_SDK_ROOT: "$CI_PROJECT_DIR/android-sdk"
@@ -11,44 +10,22 @@ variables:
 test:
   stage: test
   image: node:24-bullseye
-  before_script:
+  script:
     - export PATH="$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/emulator"
     - apt-get update
-    - apt-get install -y openjdk-17-jdk wget unzip curl git libglu1-mesa libpulse0 libnss3 libxss1 libasound2 xvfb qemu-kvm
+    - apt-get install -y openjdk-17-jdk wget unzip curl git
     - mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
     - wget -O /tmp/commandlinetools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
     - unzip -q /tmp/commandlinetools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools"
     - mv "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
     - yes | sdkmanager --licenses
-    - sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "emulator" "system-images;android-35;google_apis;x86_64"
-    - mkdir -p "$ANDROID_AVD_HOME"
-    - echo "no" | avdmanager create avd -n ci-emulator -k "system-images;android-35;google_apis;x86_64" --device "pixel"
-    - npm install
-    - npm install -D allure-commandline
-    - npx appium driver install uiautomator2
-    - adb start-server
-    - nohup emulator -avd ci-emulator -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -accel off > emulator.log 2>&1 &
-    - adb wait-for-device
-  script:
-    - npx wdio run ./wdio.android.app.conf.js
-    - npx allure generate ./allure-results -o ./allure-report
+    - sdkmanager --list | head -50
+    - echo "ANDROID_HOME=$ANDROID_HOME"
+    - echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+    - ls -la "$ANDROID_SDK_ROOT"
+    - ls -la "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin"
   artifacts:
     when: always
     paths:
-      - allure-results
-      - allure-report
-      - emulator.log
-    expire_in: 7 days
-
-pages:
-  stage: deploy
-  dependencies:
-    - test
-  script:
-    - mkdir -p public
-    - cp -r allure-report/* public/
-  artifacts:
-    paths:
-      - public
-  only:
-    - main
+      - android-sdk
+    expire_in: 1 day
