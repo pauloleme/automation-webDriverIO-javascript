@@ -1,6 +1,7 @@
 stages:
   - setup
   - test
+  - deploy
 
 variables:
   ANDROID_SDK_ROOT: "$CI_PROJECT_DIR/android-sdk"
@@ -21,11 +22,6 @@ setup-android:
     - mv "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
     - yes | sdkmanager --sdk_root="$ANDROID_SDK_ROOT" --licenses || true
     - sdkmanager --sdk_root="$ANDROID_SDK_ROOT" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
-    - echo "ANDROID_HOME=$ANDROID_HOME"
-    - echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
-    - ls -la "$ANDROID_SDK_ROOT"
-    - ls -la "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin"
-    - ls -la "$ANDROID_SDK_ROOT/platform-tools"
   artifacts:
     when: always
     paths:
@@ -46,12 +42,22 @@ run-tests:
     - npx appium driver install uiautomator2
     - npx wdio run ./wdio.android.app.conf.js || true
     - npx allure generate ./allure-results -o ./allure-report || true
-    - ls -la
-    - ls -la allure-results || true
-    - ls -la allure-report || true
   artifacts:
     when: always
     paths:
       - allure-results
       - allure-report
     expire_in: 7 days
+
+pages:
+  stage: deploy
+  dependencies:
+    - run-tests
+  script:
+    - mkdir -p public
+    - cp -r allure-report/* public/
+  artifacts:
+    paths:
+      - public
+  only:
+    - main
