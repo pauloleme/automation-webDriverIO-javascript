@@ -17,8 +17,7 @@ exports.config = {
         platformName: 'Android',
         'appium:deviceName': 'Android Emulator',
         'appium:automationName': 'UiAutomator2',
-'appium:app': path.join(process.cwd(), 'android', 'app', 'build', 'outputs', 'apk', 'debug', 'app-debug.apk'),        'appium:appPackage': 'com.wdiodemoapp',
-        'appium:appActivity': 'com.wdiodemoapp.MainActivity',
+'appium:app': path.join(process.cwd(), 'android', 'app', 'build', 'outputs', 'apk', 'debug', 'android.wdio.native.app.v2.2.0.apk'),        'appium:appActivity': 'com.wdiodemoapp.MainActivity',
         'appium:newCommandTimeout': 240,
         'appium:noReset': false,
         'appium:noSign': true

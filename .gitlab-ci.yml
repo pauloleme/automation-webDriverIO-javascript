@@ -48,8 +48,8 @@ run-tests:
     - adb shell settings put global animator_duration_scale 0 || true
     - npx wdio run ./wdio.android.app.conf.js || true
     - rm -rf allure-report
-    - mkdir -p allure-results
-    - npx allure generate ./allure-results -o ./allure-report --clean
+    - test -d allure-results || mkdir -p allure-results
+    - npx allure generate ./allure-results -o ./allure-report
     - test -f ./allure-report/index.html
     - ls -la allure-results || true
     - ls -la allure-report || true
