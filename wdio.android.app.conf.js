@@ -18,10 +18,11 @@ console.log('APK exists:', fs.existsSync(appPath));
 
 exports.config = {
   runner: 'local',
+  hostname: '127.0.0.1',
   port: 4723,
+  path: '/',
 
   specs: ['./test/specs/**/*.js'],
-
   exclude: [],
   maxInstances: 1,
 
@@ -41,7 +42,7 @@ exports.config = {
   connectionRetryTimeout: 120000,
   connectionRetryCount: 3,
 
-  services: ['appium'],
+  services: [],
   framework: 'mocha',
 
   reporters: [

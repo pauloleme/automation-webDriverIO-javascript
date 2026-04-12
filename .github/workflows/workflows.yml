@@ -2,13 +2,24 @@ name: Continuous Integration
 
 on:
   pull_request:
-permissions:
-  contents: write
+  push:
+    branches:
+      - main
+      - master
 
+permissions:
+  contents: read
 
 jobs:
   continuous-integration:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    env:
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      JAVA_HOME: /usr/lib/jvm/temurin-17-jdk-amd64
+      ADB_INSTALL_TIMEOUT: 20
 
     steps:
       - name: Checkout code
@@ -18,6 +29,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
 
       - name: Install dependencies
         run: npm install
@@ -25,18 +43,66 @@ jobs:
       - name: Install Allure CLI
         run: npm install -D allure-commandline
 
+      - name: Install Android SDK components
+        run: |
+          yes | sdkmanager --licenses || true
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "emulator" "system-images;android-35;google_apis;x86_64"
+
+      - name: Build Android app
+        run: |
+          chmod +x android/gradlew
+          cd android
+          ./gradlew assembleDebug
+          cd ..
+          ls -la android/app/build/outputs/apk/debug
+
+      - name: Install Appium UiAutomator2 driver
+        run: |
+          npx appium driver install uiautomator2
+
+      - name: Create Android emulator
+        run: |
+          echo "no" | avdmanager create avd --force --name ci-emulator --package "system-images;android-35;google_apis;x86_64" --device "pixel"
+
+      - name: Start emulator
+        run: |
+          nohup emulator -avd ci-emulator -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -accel off -no-snapshot > emulator.log 2>&1 &
+          adb wait-for-device
+          for i in {1..30}; do
+            boot_completed=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
+            if [ "$boot_completed" = "1" ]; then
+              echo "Emulator booted"
+              break
+            fi
+            echo "Waiting for emulator boot... attempt $i"
+            sleep 10
+          done
+          adb devices
+          adb shell settings put global window_animation_scale 0 || true
+          adb shell settings put global transition_animation_scale 0 || true
+          adb shell settings put global animator_duration_scale 0 || true
+
       - name: Start Appium
         run: |
-          npx appium > appium.log 2>&1 &
-          sleep 10
+          nohup npx appium > appium.log 2>&1 &
+          sleep 15
 
       - name: Run tests
-        run: npm run wdio
+        run: npx wdio run ./wdio.android.app.conf.js
         continue-on-error: true
 
       - name: Generate Allure report
         if: always()
-        run: npx allure generate ./allure-results -o ./allure-report
+        run: |
+          mkdir -p allure-results
+          npx allure generate ./allure-results -o ./allure-report --clean
+
+      - name: Upload APK artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
 
       - name: Upload Allure results
         if: always()
@@ -59,10 +125,9 @@ jobs:
           name: appium-log
           path: appium.log
 
-      - name: Commit files
-  run: |
-    git config --global user.name "github-actions[bot]"
-    git config --global user.email "github-actions[bot]@users.noreply.github.com"
-    git add .
-    git commit -m "update files" || echo "No changes to commit"
-    git push
+      - name: Upload Emulator log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: emulator-log
+          path: emulator.log
