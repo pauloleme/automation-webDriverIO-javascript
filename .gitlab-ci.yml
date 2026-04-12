@@ -24,6 +24,9 @@ run-tests:
     - sdkmanager --sdk_root="$ANDROID_SDK_ROOT" --install "platform-tools" "platforms;android-35" "build-tools;35.0.0" "emulator" "system-images;android-35;google_apis;x86_64"
   script:
     - npm install
+    - chmod +x android/gradlew
+    - cd android && ./gradlew assembleDebug && cd ..
+    - ls -la android/app/build/outputs/apk/debug || true
     - npm install -D allure-commandline
     - npx appium driver install uiautomator2
     - mkdir -p "$ANDROID_AVD_HOME"
@@ -48,7 +51,7 @@ run-tests:
     - adb shell settings put global animator_duration_scale 0 || true
     - npx wdio run ./wdio.android.app.conf.js || true
     - rm -rf allure-report
-    - test -d allure-results || mkdir -p allure-results
+    - mkdir -p allure-results
     - npx allure generate ./allure-results -o ./allure-report
     - test -f ./allure-report/index.html
     - ls -la allure-results || true
@@ -57,6 +60,7 @@ run-tests:
   artifacts:
     when: always
     paths:
+      - android/app/build/outputs/apk/debug
       - allure-results
       - allure-report
       - emulator.log
