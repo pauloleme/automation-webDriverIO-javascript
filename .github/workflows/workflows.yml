@@ -18,6 +18,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -56,30 +63,32 @@ jobs:
 
       - name: Inspect APK
         run: |
-          $ANDROID_HOME/build-tools/34.0.0/aapt dump badging android/app/build/outputs/apk/debug/app-debug.apk | head -40 || true
+          BUILD_TOOLS=$(find "$ANDROID_HOME/build-tools" -maxdepth 1 -mindepth 1 -type d | sort -V | tail -n 1)
+          "$BUILD_TOOLS/aapt" dump badging android/app/build/outputs/apk/debug/app-debug.apk | head -40 || true
 
       - name: Run Android tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 33
+          api-level: 30
           arch: x86_64
-          profile: pixel_6
+          profile: pixel_4
+          ram-size: 2048M
+          heap-size: 512M
+          disk-size: 6000M
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           disable-animations: true
           script: |
+            adb start-server
             adb devices
             adb wait-for-device
-            adb shell settings put global window_animation_scale 0
-            adb shell settings put global transition_animation_scale 0
-            adb shell settings put global animator_duration_scale 0
+            adb shell getprop sys.boot_completed
+            adb shell settings put global window_animation_scale 0 || true
+            adb shell settings put global transition_animation_scale 0 || true
+            adb shell settings put global animator_duration_scale 0 || true
             adb shell input keyevent 82 || true
 
             nohup appium > appium.log 2>&1 &
-            sleep 20
-
-            adb install -r android/app/build/outputs/apk/debug/app-debug.apk || true
-            adb shell pm list packages | grep wdio || true
-            adb shell monkey -p com.wdiodemoapp -c android.intent.category.LAUNCHER 1 || true
+            sleep 15
 
             npx wdio run ./wdio.android.app.conf.js
 
@@ -95,6 +104,7 @@ jobs:
         with:
           name: app-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: ignore
 
       - name: Upload Allure results
         if: always()
@@ -120,12 +130,13 @@ jobs:
           path: appium.log
           if-no-files-found: ignore
 
-      - name: Upload Emulator log
+      - name: Upload Emulator logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: emulator-log
+          name: emulator-logs
           path: |
             /home/runner/.android/adb*.log
             /home/runner/.android/emulator*.log
+            /tmp/android-runner/**
           if-no-files-found: ignore
