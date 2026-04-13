@@ -26,31 +26,28 @@ exports.config = {
   exclude: [],
 
   maxInstances: 1,
-  maxInstancesPerCapability: 1,
 
-  capabilities: [
-    {
-      platformName: 'Android',
-      'appium:deviceName': 'Android Emulator',
-      'appium:automationName': 'UiAutomator2',
-      'appium:platformVersion': '13',
-      'appium:app': appPath,
-      'appium:appPackage': 'com.wdiodemoapp',
-      'appium:appActivity': 'expo.modules.devlauncher.launcher.DevLauncherActivity',
-      'appium:appWaitActivity': '*',
-      'appium:appWaitForLaunch': true,
-      'appium:newCommandTimeout': 240,
-      'appium:uiautomator2ServerInstallTimeout': 120000,
-      'appium:uiautomator2ServerLaunchTimeout': 120000,
-      'appium:androidInstallTimeout': 120000,
-      'appium:appWaitDuration': 120000,
-      'appium:autoGrantPermissions': true,
-      'appium:noReset': false,
-      'appium:fullReset': false,
-      'appium:skipDeviceInitialization': false,
-      'appium:skipServerInstallation': false
-    }
-  ],
+  capabilities: [{
+    platformName: 'Android',
+    'appium:deviceName': 'Android Emulator',
+    'appium:automationName': 'UiAutomator2',
+    'appium:platformVersion': '13',
+    'appium:app': appPath,
+    'appium:appPackage': 'com.wdiodemoapp',
+    'appium:appActivity': 'expo.modules.devlauncher.launcher.DevLauncherActivity',
+    'appium:appWaitActivity': '*',
+    'appium:appWaitForLaunch': true,
+    'appium:newCommandTimeout': 240,
+    'appium:uiautomator2ServerInstallTimeout': 180000,
+    'appium:uiautomator2ServerLaunchTimeout': 180000,
+    'appium:androidInstallTimeout': 180000,
+    'appium:appWaitDuration': 180000,
+    'appium:autoGrantPermissions': true,
+    'appium:noReset': false,
+    'appium:fullReset': false,
+    'appium:skipDeviceInitialization': false,
+    'appium:skipServerInstallation': false
+  }],
 
   logLevel: 'info',
   bail: 0,
@@ -63,14 +60,11 @@ exports.config = {
 
   reporters: [
     'spec',
-    [
-      'allure',
-      {
-        outputDir: 'allure-results',
-        disableWebdriverStepsReporting: true,
-        disableWebdriverScreenshotsReporting: false
-      }
-    ]
+    ['allure', {
+      outputDir: 'allure-results',
+      disableWebdriverStepsReporting: true,
+      disableWebdriverScreenshotsReporting: false
+    }]
   ],
 
   mochaOpts: {

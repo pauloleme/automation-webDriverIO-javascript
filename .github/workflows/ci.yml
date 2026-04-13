@@ -119,7 +119,7 @@ jobs:
             curl --fail http://127.0.0.1:4723/status
 
             echo "Running WDIO..."
-            npm run wdio
+            npx wdio run ./wdio.android.app.conf.js --maxInstances=1
 
       - name: Generate Allure report
         if: always()
