@@ -26,30 +26,30 @@ exports.config = {
   exclude: [],
 
   maxInstances: 1,
+  maxInstancesPerCapability: 1,
 
   capabilities: [{
     platformName: 'Android',
     'appium:deviceName': 'Android Emulator',
     'appium:automationName': 'UiAutomator2',
     'appium:app': appPath,
+    'appium:autoGrantPermissions': true,
     'appium:newCommandTimeout': 240,
     'appium:noReset': false,
+    'appium:fullReset': false,
     'appium:noSign': true,
-    'appium:autoGrantPermissions': true,
-    'appium:appWaitDuration': 120000,
+    'appium:appWaitDuration': 180000,
     'appium:androidInstallTimeout': 180000,
     'appium:uiautomator2ServerInstallTimeout': 180000,
     'appium:uiautomator2ServerLaunchTimeout': 180000,
-    'appium:adbExecTimeout': 180000,
-    'appium:avdLaunchTimeout': 180000,
-    'appium:avdReadyTimeout': 180000
+    'appium:adbExecTimeout': 180000
   }],
 
   logLevel: 'info',
   bail: 0,
-  waitforTimeout: 10000,
+  waitforTimeout: 20000,
   connectionRetryTimeout: 180000,
-  connectionRetryCount: 3,
+  connectionRetryCount: 1,
 
   services: [],
   framework: 'mocha',
@@ -65,7 +65,7 @@ exports.config = {
 
   mochaOpts: {
     ui: 'bdd',
-    timeout: 60000
+    timeout: 120000
   },
 
   onPrepare: function () {
@@ -82,7 +82,7 @@ exports.config = {
         'Device=Android Emulator',
         'AutomationName=UiAutomator2',
         'App=native-demo-app',
-        'TestEnvironment=QA',
+        'TestEnvironment=CI',
         `NodeVersion=${process.version}`,
         'Framework=WebdriverIO'
       ].join('\n')

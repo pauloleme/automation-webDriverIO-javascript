@@ -46,7 +46,7 @@ jobs:
           appium driver install uiautomator2
 
       - name: Install Allure CLI
-        run: npm install -g allure-commandline --save-dev
+        run: npm install -g allure-commandline
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
@@ -69,7 +69,7 @@ jobs:
       - name: Run Android tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 30
+          api-level: 33
           arch: x86_64
           profile: pixel_4
           ram-size: 2048M
@@ -81,16 +81,31 @@ jobs:
             adb start-server
             adb devices
             adb wait-for-device
-            adb shell getprop sys.boot_completed
+
+            until [[ "$(adb shell getprop sys.boot_completed | tr -d '\r')" == "1" ]]; do
+              echo "Waiting for emulator to finish booting..."
+              sleep 5
+            done
+
             adb shell settings put global window_animation_scale 0 || true
             adb shell settings put global transition_animation_scale 0 || true
             adb shell settings put global animator_duration_scale 0 || true
             adb shell input keyevent 82 || true
 
-            nohup appium > appium.log 2>&1 &
-            sleep 15
+            adb logcat -c
+            nohup adb logcat > logcat.log 2>&1 &
 
-            npx wdio run ./wdio.android.app.conf.js
+            adb install -r android/app/build/outputs/apk/debug/app-debug.apk || true
+            adb shell monkey -p com.wdiodemoapp -c android.intent.category.LAUNCHER 1 || true
+            sleep 10
+            adb shell dumpsys window | grep -E 'mCurrentFocus|mFocusedApp' || true
+
+            nohup appium --base-path / > appium.log 2>&1 &
+            sleep 20
+
+            curl -X GET http://127.0.0.1:4723/status || true
+
+            npx wdio run ./wdio.android.app.conf.js --maxInstances=1
 
       - name: Generate Allure report
         if: always()
@@ -128,6 +143,14 @@ jobs:
         with:
           name: appium-log
           path: appium.log
+          if-no-files-found: ignore
+
+      - name: Upload Logcat
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logcat
+          path: logcat.log
           if-no-files-found: ignore
 
       - name: Upload Emulator logs
