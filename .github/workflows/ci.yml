@@ -20,8 +20,7 @@ jobs:
 
       - name: Enable KVM
         run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
-            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
@@ -78,6 +77,8 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           disable-animations: true
           script: |
+            set -e
+
             echo "Restarting ADB..."
             adb kill-server || true
             adb start-server
@@ -97,11 +98,15 @@ jobs:
             echo "ADB devices:"
             adb devices
 
+            echo "Disabling animations..."
             adb shell settings put global window_animation_scale 0 || true
             adb shell settings put global transition_animation_scale 0 || true
             adb shell settings put global animator_duration_scale 0 || true
+
+            echo "Unlocking emulator..."
             adb shell input keyevent 82 || true
 
+            echo "Starting logcat capture..."
             adb logcat -c
             nohup adb logcat > logcat.log 2>&1 &
 
@@ -118,7 +123,7 @@ jobs:
             sleep 20
 
             echo "Checking Appium status..."
-            curl http://127.0.0.1:4723/status || true
+            curl --fail http://127.0.0.1:4723/status || true
 
             echo "Running WDIO..."
             npm run wdio
