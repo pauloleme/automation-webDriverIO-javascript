@@ -30,17 +30,22 @@ class LoginPage extends BasePage {
   }
 
   async open() {
-    await this.click(this.loginTab);
+    await this.loginTab.waitForDisplayed({ timeout: 30000 });
+    await this.loginTab.click();
+    await this.emailInput.waitForDisplayed({ timeout: 30000 });
   }
 
   async closePopUp() {
-    await this.click(this.loginPopUp);
+    if (await this.loginPopUp.isDisplayed().catch(() => false)) {
+      await this.loginPopUp.click();
+    }
   }
 
   async login(email, password) {
-    await this.type(this.emailInput, email);
-    await this.type(this.passwordInput, password);
-    await this.click(this.loginButton);
+    await this.emailInput.waitForDisplayed({ timeout: 30000 });
+    await this.emailInput.setValue(email);
+    await this.passwordInput.setValue(password);
+    await this.loginButton.click();
   }
 }
 
