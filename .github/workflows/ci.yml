@@ -83,12 +83,7 @@ jobs:
             adb wait-for-device
 
             echo "Waiting for boot completion..."
-            boot_completed=""
-            until [ "$boot_completed" = "1" ]; do
-              boot_completed=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)
-              echo "boot status: $boot_completed"
-              sleep 5
-            done
+            sh -c 'boot_completed=""; while [ "$boot_completed" != "1" ]; do boot_completed=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r" || true); echo "boot status: $boot_completed"; sleep 5; done'
 
             echo "Waiting extra time for stabilization..."
             sleep 30
