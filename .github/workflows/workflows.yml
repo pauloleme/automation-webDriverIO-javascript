@@ -5,20 +5,14 @@ on:
   push:
     branches:
       - main
-      - master
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   continuous-integration:
     runs-on: ubuntu-latest
     timeout-minutes: 60
-
-    env:
-      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
-      ANDROID_HOME: /usr/local/lib/android/sdk
-      ADB_INSTALL_TIMEOUT: 20
 
     steps:
       - name: Checkout code
@@ -36,93 +30,62 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Enable KVM
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils
+          sudo chown root:kvm /dev/kvm || true
+          sudo chmod 666 /dev/kvm || true
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      - name: Install Allure CLI
-        run: npm install -D allure-commandline
-
-      - name: Show Android SDK info
+      - name: Install Appium
         run: |
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
-          which sdkmanager || true
-          which adb || true
-          which emulator || true
+          npm install -g appium
+          appium driver install uiautomator2
 
-      - name: Install Android SDK components
-        run: |
-          yes | sdkmanager --licenses || true
-          sdkmanager --install \
-            "platform-tools" \
-            "platforms;android-35" \
-            "build-tools;35.0.0" \
-            "emulator" \
-            "system-images;android-35;google_apis;x86_64"
+      - name: Make Gradlew executable
+        run: chmod +x android/gradlew
 
-      - name: Build Android app
+      - name: Build Android APK
         run: |
-          chmod +x android/gradlew
           cd android
           ./gradlew assembleDebug
-          cd ..
-          ls -la android/app/build/outputs/apk/debug || true
 
-      - name: Verify APK exists
+      - name: Check APK path
         run: |
+          ls -la android/app/build/outputs/apk/debug/
           test -f android/app/build/outputs/apk/debug/app-debug.apk
-          echo "APK found successfully"
-
-      - name: Install Appium UiAutomator2 driver
-        run: |
-          npx appium driver install uiautomator2
-
-      - name: Create Android emulator
-        run: |
-          echo "no" | avdmanager create avd --force --name ci-emulator --package "system-images;android-35;google_apis;x86_64" --device "pixel"
 
       - name: Start emulator
-        run: |
-          nohup emulator -avd ci-emulator -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -accel off -no-snapshot > emulator.log 2>&1 &
-          adb start-server
-          adb wait-for-device
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          arch: x86_64
+          profile: pixel_6
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          script: |
+            adb devices
+            adb wait-for-device
+            adb shell settings put global window_animation_scale 0
+            adb shell settings put global transition_animation_scale 0
+            adb shell settings put global animator_duration_scale 0
+            adb shell input keyevent 82
 
-          for i in {1..30}; do
-            boot_completed=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
-            if [ "$boot_completed" = "1" ]; then
-              echo "Emulator booted"
-              break
-            fi
-            echo "Waiting for emulator boot... attempt $i"
-            sleep 10
-          done
+            nohup appium > appium.log 2>&1 &
+            sleep 15
 
-          adb devices
-          adb shell settings put global window_animation_scale 0 || true
-          adb shell settings put global transition_animation_scale 0 || true
-          adb shell settings put global animator_duration_scale 0 || true
-          adb shell input keyevent 82 || true
-
-      - name: Start Appium
-        run: |
-          nohup npx appium --base-path / > appium.log 2>&1 &
-          sleep 15
-          cat appium.log || true
-
-      - name: Run tests
-        run: npx wdio run ./wdio.android.app.conf.js
-        continue-on-error: true
+            npx wdio run ./wdio.android.app.conf.js
 
       - name: Generate Allure report
         if: always()
         run: |
           mkdir -p allure-results
-          ./node_modules/.bin/allure generate allure-results --clean -o allure-report || true
+          npx allure generate ./allure-results -o ./allure-report --clean
 
-      - name: Upload APK artifact
+      - name: Upload APK Artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -155,4 +118,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: emulator-log
-          path: emulator.log
+          path: /home/runner/.android/adb*.log
+          if-no-files-found: ignore
