@@ -49,7 +49,7 @@ exports.config = {
   bail: 0,
   waitforTimeout: 20000,
   connectionRetryTimeout: 180000,
-  connectionRetryCount: 1,
+  connectionRetryCount: 3,
 
   services: [],
   framework: 'mocha',

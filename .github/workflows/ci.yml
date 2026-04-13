@@ -78,11 +78,24 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           disable-animations: true
           script: |
+            echo "Restarting ADB..."
+            adb kill-server || true
             adb start-server
-            adb devices
+
+            echo "Waiting for emulator..."
             adb wait-for-device
-            sleep 30
-            adb shell getprop sys.boot_completed || true
+
+            echo "Checking boot completion..."
+            until adb shell getprop sys.boot_completed | tr -d '\r' | grep -q "1"; do
+              echo "Emulator still booting..."
+              sleep 5
+            done
+
+            echo "Extra wait to stabilize device..."
+            sleep 20
+
+            echo "ADB devices:"
+            adb devices
 
             adb shell settings put global window_animation_scale 0 || true
             adb shell settings put global transition_animation_scale 0 || true
@@ -92,16 +105,22 @@ jobs:
             adb logcat -c
             nohup adb logcat > logcat.log 2>&1 &
 
-            adb install -r android/app/build/outputs/apk/debug/app-debug.apk || true
+            echo "Installing APK..."
+            adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+
+            echo "Launching app..."
             adb shell monkey -p com.wdiodemoapp -c android.intent.category.LAUNCHER 1 || true
             sleep 10
             adb shell dumpsys window | grep -E 'mCurrentFocus|mFocusedApp' || true
 
+            echo "Starting Appium..."
             nohup appium --base-path / > appium.log 2>&1 &
             sleep 20
 
+            echo "Checking Appium status..."
             curl http://127.0.0.1:4723/status || true
 
+            echo "Running WDIO..."
             npx wdio run ./wdio.android.app.conf.js --maxInstances=1
 
       - name: Generate Allure report
