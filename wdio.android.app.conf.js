@@ -24,27 +24,31 @@ exports.config = {
 
   specs: ['./test/specs/**/*.js'],
   exclude: [],
+
   maxInstances: 1,
 
   capabilities: [{
-     platformName: 'Android',
-      'appium:deviceName': 'Android Emulator',
-      'appium:automationName': 'UiAutomator2',
-      'appium:app': appPath,
-      'appium:newCommandTimeout': 240,
-      'appium:noReset': false,
-      'appium:noSign': true,
-      'appium:autoGrantPermissions': true,
-      'appium:appWaitDuration': 120000,
-      'appium:androidInstallTimeout': 120000,
-      'appium:uiautomator2ServerInstallTimeout': 120000,
-      'appium:uiautomator2ServerLaunchTimeout': 120000
-    }],
+    platformName: 'Android',
+    'appium:deviceName': 'Android Emulator',
+    'appium:automationName': 'UiAutomator2',
+    'appium:app': appPath,
+    'appium:newCommandTimeout': 240,
+    'appium:noReset': false,
+    'appium:noSign': true,
+    'appium:autoGrantPermissions': true,
+    'appium:appWaitDuration': 120000,
+    'appium:androidInstallTimeout': 180000,
+    'appium:uiautomator2ServerInstallTimeout': 180000,
+    'appium:uiautomator2ServerLaunchTimeout': 180000,
+    'appium:adbExecTimeout': 180000,
+    'appium:avdLaunchTimeout': 180000,
+    'appium:avdReadyTimeout': 180000
+  }],
 
   logLevel: 'info',
   bail: 0,
   waitforTimeout: 10000,
-  connectionRetryTimeout: 120000,
+  connectionRetryTimeout: 180000,
   connectionRetryCount: 3,
 
   services: [],
