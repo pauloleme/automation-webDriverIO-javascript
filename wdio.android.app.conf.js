@@ -27,18 +27,19 @@ exports.config = {
   maxInstances: 1,
 
   capabilities: [{
-    platformName: 'Android',
-    'appium:deviceName': 'Android Emulator',
-    'appium:automationName': 'UiAutomator2',
-    'appium:app': appPath,
-    'appium:newCommandTimeout': 240,
-    'appium:noReset': false,
-    'appium:noSign': true,
-    'appium:autoGrantPermissions': true,
-    'appium:appWaitDuration': 90000,
-    'appium:androidInstallTimeout': 90000,
-    'appium:adbExecTimeout': 90000
-  }],
+     platformName: 'Android',
+      'appium:deviceName': 'Android Emulator',
+      'appium:automationName': 'UiAutomator2',
+      'appium:app': appPath,
+      'appium:newCommandTimeout': 240,
+      'appium:noReset': false,
+      'appium:noSign': true,
+      'appium:autoGrantPermissions': true,
+      'appium:appWaitDuration': 120000,
+      'appium:androidInstallTimeout': 120000,
+      'appium:uiautomator2ServerInstallTimeout': 120000,
+      'appium:uiautomator2ServerLaunchTimeout': 120000
+    }],
 
   logLevel: 'info',
   bail: 0,
