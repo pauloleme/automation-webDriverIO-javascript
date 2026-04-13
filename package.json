@@ -24,7 +24,7 @@
     "allure:clear": "if exist allure-results rmdir /s /q allure-results & if exist allure-report rmdir /s /q allure-report & if exist errorShots rmdir /s /q errorShots",
     "allure:open": "npx allure open ./allure-report",
     "allure:serve": "npx allure serve ./allure-results",
-    "test:report": "npm run allure:clear && npm run wdio & npm run allure:serve"
+    "test:report": "npm run allure:clear && npm run wdio && npm run allure:serve"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.1.1",
