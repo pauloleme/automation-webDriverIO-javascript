@@ -33,7 +33,11 @@ exports.config = {
     'appium:app': appPath,
     'appium:newCommandTimeout': 240,
     'appium:noReset': false,
-    'appium:noSign': true
+    'appium:noSign': true,
+    'appium:autoGrantPermissions': true,
+    'appium:appWaitDuration': 90000,
+    'appium:androidInstallTimeout': 90000,
+    'appium:adbExecTimeout': 90000
   }],
 
   logLevel: 'info',
@@ -84,14 +88,14 @@ exports.config = {
     if (!passed) {
       const screenshot = await browser.takeScreenshot();
 
-      await allure.addAttachment(
+      allure.addAttachment(
         `Screenshot on failure - ${test.title}`,
         Buffer.from(screenshot, 'base64'),
         'image/png'
       );
 
       if (error) {
-        await allure.addAttachment(
+        allure.addAttachment(
           `Error message - ${test.title}`,
           `${error.message || error}\n\n${error.stack || ''}`,
           'text/plain'

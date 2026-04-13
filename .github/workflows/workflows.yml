@@ -30,13 +30,6 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Enable KVM
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils
-          sudo chown root:kvm /dev/kvm || true
-          sudo chmod 666 /dev/kvm || true
-
       - name: Install dependencies
         run: npm ci
 
@@ -45,20 +38,27 @@ jobs:
           npm install -g appium
           appium driver install uiautomator2
 
-      - name: Make Gradlew executable
+      - name: Install Allure CLI
+        run: npm install -g allure-commandline --save-dev
+
+      - name: Make gradlew executable
         run: chmod +x android/gradlew
 
-      - name: Build Android APK
+      - name: Build debug APK
         run: |
           cd android
           ./gradlew assembleDebug
 
-      - name: Check APK path
+      - name: Check APK
         run: |
           ls -la android/app/build/outputs/apk/debug/
           test -f android/app/build/outputs/apk/debug/app-debug.apk
 
-      - name: Start emulator
+      - name: Inspect APK
+        run: |
+          $ANDROID_HOME/build-tools/34.0.0/aapt dump badging android/app/build/outputs/apk/debug/app-debug.apk | head -40 || true
+
+      - name: Run Android tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 33
@@ -72,10 +72,14 @@ jobs:
             adb shell settings put global window_animation_scale 0
             adb shell settings put global transition_animation_scale 0
             adb shell settings put global animator_duration_scale 0
-            adb shell input keyevent 82
+            adb shell input keyevent 82 || true
 
             nohup appium > appium.log 2>&1 &
-            sleep 15
+            sleep 20
+
+            adb install -r android/app/build/outputs/apk/debug/app-debug.apk || true
+            adb shell pm list packages | grep wdio || true
+            adb shell monkey -p com.wdiodemoapp -c android.intent.category.LAUNCHER 1 || true
 
             npx wdio run ./wdio.android.app.conf.js
 
@@ -83,9 +87,9 @@ jobs:
         if: always()
         run: |
           mkdir -p allure-results
-          npx allure generate ./allure-results -o ./allure-report --clean
+          allure generate ./allure-results -o ./allure-report --clean || true
 
-      - name: Upload APK Artifact
+      - name: Upload APK artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -98,6 +102,7 @@ jobs:
         with:
           name: allure-results
           path: allure-results
+          if-no-files-found: ignore
 
       - name: Upload Allure report
         if: always()
@@ -105,6 +110,7 @@ jobs:
         with:
           name: allure-report
           path: allure-report
+          if-no-files-found: ignore
 
       - name: Upload Appium log
         if: always()
@@ -112,11 +118,14 @@ jobs:
         with:
           name: appium-log
           path: appium.log
+          if-no-files-found: ignore
 
       - name: Upload Emulator log
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: emulator-log
-          path: /home/runner/.android/adb*.log
+          path: |
+            /home/runner/.android/adb*.log
+            /home/runner/.android/emulator*.log
           if-no-files-found: ignore
