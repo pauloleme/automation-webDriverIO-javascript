@@ -81,11 +81,8 @@ jobs:
             adb start-server
             adb devices
             adb wait-for-device
-
-            while [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" != "1" ]; do
-              echo "Waiting for emulator to finish booting..."
-              sleep 5
-            done
+            sleep 30
+            adb shell getprop sys.boot_completed || true
 
             adb shell settings put global window_animation_scale 0 || true
             adb shell settings put global transition_animation_scale 0 || true
