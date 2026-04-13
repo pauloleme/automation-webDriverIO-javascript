@@ -112,8 +112,8 @@ jobs:
             adb shell dumpsys window | grep -E 'mCurrentFocus|mFocusedApp' || true
 
             echo "Starting Appium..."
-            nohup appium --base-path / > appium.log 2>&1 &
-            sleep 15
+            nohup appium --base-path / --log-level info > appium.log 2>&1 &
+            sleep 20
 
             echo "Checking Appium status..."
             curl --fail http://127.0.0.1:4723/status
