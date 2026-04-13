@@ -79,21 +79,19 @@ jobs:
           script: |
             set -e
 
-            echo "Restarting ADB..."
-            adb kill-server || true
-            adb start-server
-
-            echo "Waiting for emulator..."
+            echo "Waiting for emulator device..."
             adb wait-for-device
 
-            echo "Checking boot completion..."
-            until adb shell getprop sys.boot_completed | tr -d '\r' | grep -q "1"; do
-              echo "Emulator still booting..."
+            echo "Waiting for boot completion..."
+            boot_completed=""
+            until [ "$boot_completed" = "1" ]; do
+              boot_completed=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)
+              echo "boot status: $boot_completed"
               sleep 5
             done
 
-            echo "Extra wait to stabilize device..."
-            sleep 20
+            echo "Waiting extra time for stabilization..."
+            sleep 30
 
             echo "ADB devices:"
             adb devices
@@ -107,7 +105,7 @@ jobs:
             adb shell input keyevent 82 || true
 
             echo "Starting logcat capture..."
-            adb logcat -c
+            adb logcat -c || true
             nohup adb logcat > logcat.log 2>&1 &
 
             echo "Installing APK..."
@@ -120,10 +118,10 @@ jobs:
 
             echo "Starting Appium..."
             nohup appium --base-path / > appium.log 2>&1 &
-            sleep 20
+            sleep 15
 
             echo "Checking Appium status..."
-            curl --fail http://127.0.0.1:4723/status || true
+            curl --fail http://127.0.0.1:4723/status
 
             echo "Running WDIO..."
             npm run wdio
